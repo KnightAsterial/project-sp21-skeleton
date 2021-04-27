@@ -16,7 +16,7 @@ def validate_file(path):
             return False
     return True
 
-def read_input_file(path, max_size=None):
+def read_input_file(path, min_size=None, max_size=None):
     """
     Parses and validates an input file
     Args:
@@ -50,6 +50,12 @@ def read_input_file(path, max_size=None):
 
         for node, val in G.degree():
             assert val >= 2, 'Every vertex in the input graph should have degree atleast 2'
+            
+        if min_size is not None:
+            assert min_size < len(G), 'Graph doesn\'t have enough nodes for it\'s size'
+            
+        if max_size is not None:
+            assert len(G) <= max_size, 'Graph has too many nodes for it\'s size'
 
         return G
 
@@ -82,11 +88,11 @@ def read_output_file(G, path):
     """
     H = G.copy()
     if len(H) >= 20 and len(H) <= 30:
-        max_cities = 2
+        max_cities = 1
         max_roads = 15
     elif len(H) > 30 and len(H) <= 50:
         max_cities = 3
-        max_roads = 30
+        max_roads = 50
     elif len(H) > 50 and len(H) <= 100:
         max_cities = 5
         max_roads = 100
