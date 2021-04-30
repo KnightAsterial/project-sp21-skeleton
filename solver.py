@@ -15,6 +15,7 @@ from pysat.examples.hitman import Hitman
 from itertools import islice
 
 def solve(G):
+
     originalGraph = G
     G = originalGraph.copy()
 
@@ -67,14 +68,16 @@ def solve(G):
             
             hittingSetIterator = hittingSetHitman(shortestPaths)
             found = False
+            trialCap = 0
             for hs in hittingSetIterator.enumerate():
-                if (len(hs) > k):
+                trialCap += 1
+                if (len(hs) > k) or (trialCap > 1000):
                     canContinue = False
                     break
                 newG = vertexRemovalGraph.copy()
                 newG.remove_edges_from(hs)
                 if nx.is_connected(newG):
-                    print("Found hitting set of length", len(hs))
+                    # print("Found hitting set of length", len(hs))
                     found = True
                     removedEdges = hs
                     G = newG
@@ -82,7 +85,7 @@ def solve(G):
             if found == False:
                 canContinue = False
 
-        if (len(removedVertices) < c):     
+        if (len(removedVertices) < c) and canContinue:     
             # consolidate edges into vertices
             # TODO: figure out if we should pass G in here or maybe vertexRemovalGraph (4/29/21)
             # vertexToRemove, canRemoveVertex = pickRemoveVertex(G, removedEdges, s, t)
@@ -91,7 +94,7 @@ def solve(G):
                 canContinue = False
                 break
             removedVertices.append(vertexToRemove)
-            print("-------- REMOVING A VERTEX ------------")
+            # print("-------- REMOVING A VERTEX ------------")
             vertexRemovalGraph.remove_node(vertexToRemove)
             G.remove_node(vertexToRemove)
             removedEdges = list(filter(lambda edge: edge[0] != vertexToRemove and edge[1] != vertexToRemove, removedEdges))
