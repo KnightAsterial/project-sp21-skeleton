@@ -10,7 +10,279 @@ from copy import deepcopy
 
 from mip import *
 
+from pysat.examples.hitman import Hitman
+
+from itertools import islice
+
 def solve(G):
+    originalGraph = G
+    G = originalGraph.copy()
+
+    numNodes = G.number_of_nodes()
+    s = 0
+    t = numNodes - 1
+
+    # correctly identify the size of the problem
+    k = 15
+    c = 1
+    if (numNodes > 30):
+        k = 50
+        c = 3
+    if (numNodes > 50):
+        k = 100
+        c = 5
+
+    # while removedEdges < k
+    #   find shortest path
+    #   add shortest path to list of shortest paths
+    #   use ILP to find minimum hitting set of shortest paths
+    #   remove those edges from origial graph
+    #   repeat. 
+    
+    shortestPaths = []
+    removedEdges = []
+    removedVertices = []
+
+    
+    canContinue = True
+
+    # originalGraph = nothing removed
+    # vertexRemovalGraph = base for when we remove 1, 2, 3 vertices.
+    # G = temporary graph as we remove edges and vertices
+
+    vertexRemovalGraph = originalGraph.copy()
+
+
+    while (len(removedVertices) <= c) and canContinue:
+        # loop starts with G having the most recent removedEdges removed
+        while len(removedEdges) < k and canContinue:
+            # nodePathShortest = nx.dijkstra_path(G, s, t)
+            # edgePathShortest = [(nodePathShortest[i], nodePathShortest[i+1]) for i in range(len(nodePathShortest) - 1)]
+            
+            nodePathShortestList = list(islice(nx.shortest_simple_paths(G, s, t, weight='weight'), 20))
+            edgePathShortestList = [[(nodePathShortest[i], nodePathShortest[i+1]) for i in range(len(nodePathShortest) - 1)] for nodePathShortest in nodePathShortestList]
+
+            # shortestPaths.append(edgePathShortest)
+            shortestPaths.extend(edgePathShortestList)
+            
+            hittingSetIterator = hittingSetHitman(shortestPaths)
+            found = False
+            for hs in hittingSetIterator.enumerate():
+                if (len(hs) > k):
+                    canContinue = False
+                    break
+                newG = vertexRemovalGraph.copy()
+                newG.remove_edges_from(hs)
+                if nx.is_connected(newG):
+                    print("Found hitting set of length", len(hs))
+                    found = True
+                    removedEdges = hs
+                    G = newG
+                    break
+            if found == False:
+                canContinue = False
+
+        if (len(removedVertices) < c):     
+            # consolidate edges into vertices
+            # TODO: figure out if we should pass G in here or maybe vertexRemovalGraph (4/29/21)
+            # vertexToRemove, canRemoveVertex = pickRemoveVertex(G, removedEdges, s, t)
+            vertexToRemove, canRemoveVertex = pickRemoveVertex(vertexRemovalGraph, removedEdges, s, t)
+            if (not canRemoveVertex):
+                canContinue = False
+                break
+            removedVertices.append(vertexToRemove)
+            print("-------- REMOVING A VERTEX ------------")
+            vertexRemovalGraph.remove_node(vertexToRemove)
+            G.remove_node(vertexToRemove)
+            removedEdges = list(filter(lambda edge: edge[0] != vertexToRemove and edge[1] != vertexToRemove, removedEdges))
+            shortestPaths = list(filter(lambda path: not any([edge[0] == vertexToRemove or edge[1] == vertexToRemove for edge in path]), shortestPaths))
+            G = vertexRemovalGraph.copy()
+        else:
+            break
+
+
+    print(removedEdges)
+    print(removedVertices)
+    return removedVertices, removedEdges
+
+
+def hittingSetHitman(listOfPaths):
+
+    #solve
+    hitman = Hitman(htype='sorted', bootstrap_with=listOfPaths)
+
+    return hitman
+     
+
+
+def solveILP(G):
+    originalGraph = G
+    G = originalGraph.copy()
+
+    numNodes = G.number_of_nodes()
+    s = 0
+    t = numNodes - 1
+
+    # correctly identify the size of the problem
+    k = 15
+    c = 1
+    if (numNodes > 30):
+        k = 50
+        c = 3
+    if (numNodes > 50):
+        k = 100
+        c = 5
+
+    # while removedEdges < k
+    #   find shortest path
+    #   add shortest path to list of shortest paths
+    #   use ILP to find minimum hitting set of shortest paths
+    #   remove those edges from origial graph
+    #   repeat. 
+    
+    shortestPaths = []
+    removedEdges = []
+    removedVertices = []
+    
+    canContinue = True;
+    # loop starts with G having the most recent removedEdges removed
+    while len(removedEdges) < k and canContinue:
+        nodePathShortest = nx.dijkstra_path(G, s, t)
+        edgePathShortest = [(nodePathShortest[i], nodePathShortest[i+1]) for i in range(len(nodePathShortest) - 1)]
+        shortestPaths.append(edgePathShortest)
+        
+        candidateRemovedEdges, success = hittingSetILP(shortestPaths)
+        newG = originalGraph.copy()
+        newG.remove_edges_from(candidateRemovedEdges)
+        if (not nx.is_connected(newG)) or (not success):
+            canContinue = False
+            break
+        else:
+            removedEdges = candidateRemovedEdges
+            G = newG
+    
+    print(removedEdges)
+    print(removedVertices)
+    return removedVertices, removedEdges
+
+
+
+
+
+# Hitting set ILP
+#   X_(u,v) = {0,1} if included in hitting set
+#   minimize sum of all X_(u,v) in our list of shortest paths
+#   constraint: 
+#       for each shortest path, sum of X_(u,v) >= 1
+
+# takes in paths = list of lists of edge. i.e: [[(1,2), (2,3), (3,4)], [(1,3) (3, 4)]]
+def hittingSetILP(listOfPaths):
+    
+    # create the model
+    m = Model()
+    m.verbose = 0
+
+    #define variables
+    X = {}
+
+    #ensure no repeats
+    edgeSet = set()
+    for edgeList in listOfPaths:
+        for edge in edgeList:
+            edgeSet.add(edge)
+
+    #Variables
+    #X_(u,v) = {0,1} if included in hitting set
+    for edge in edgeSet:
+        u = edge[0]
+        v = edge[1]
+        X[(u,v)] = m.add_var(var_type=BINARY)
+
+    #Constraints
+    #For each shortest path, sum of X_(u,v) >= 1
+    for edgeList in listOfPaths:
+        m += xsum(X[(u,v)] for u,v in edgeList) >= 1
+
+    #Constraint
+    #sum of all X_(u,v) in our list of shortest paths
+    m.objective = xsum(X[(u,v)] for u,v in X.keys())
+    
+
+    hittingSet = []
+    m.max_gap = 0.05
+    status = m.optimize(max_seconds=300)
+    if status == OptimizationStatus.OPTIMAL:
+        print('optimal solution cost {} found'.format(m.objective_value))
+    elif status == OptimizationStatus.FEASIBLE:
+        print('sol.cost {} found, best possible: {}'.format(m.objective_value, m.objective_bound))
+    elif status == OptimizationStatus.NO_SOLUTION_FOUND:
+        print('no feasible solution found, lower bound is: {}'.format(m.objective_bound))
+    
+    if status == OptimizationStatus.OPTIMAL or status == OptimizationStatus.FEASIBLE:
+        for edge in edgeSet:
+            u = edge[0]
+            v = edge[1]
+            if X[(u,v)].x >= 0.99:
+                hittingSet.append(edge)
+        return hittingSet, True
+
+    return hittingSet, False
+
+
+def connectedHittingSetILP(G, listOfPaths):
+    
+    # create the model
+    m = Model()
+    m.verbose = 0
+
+    #define variables
+    X = {}
+
+    #ensure no repeats
+    edgeSet = set()
+    for edgeList in listOfPaths:
+        for edge in edgeList:
+            edgeSet.add(edge)
+
+    #Variables
+    #X_(u,v) = {0,1} if included in hitting set
+    for edge in edgeSet:
+        u = edge[0]
+        v = edge[1]
+        X[(u,v)] = m.add_var(var_type=BINARY)
+
+    #Constraints
+    #For each shortest path, sum of X_(u,v) >= 1
+    for edgeList in listOfPaths:
+        m += xsum(X[(u,v)] for u,v in edgeList) >= 1
+
+    #Constraint
+    #sum of all X_(u,v) in our list of shortest paths
+    m.objective = xsum(X[(u,v)] for u,v in X.keys())
+    
+
+    hittingSet = []
+    m.max_gap = 0.05
+    status = m.optimize(max_seconds=300)
+    if status == OptimizationStatus.OPTIMAL:
+        print('optimal solution cost {} found'.format(m.objective_value))
+    elif status == OptimizationStatus.FEASIBLE:
+        print('sol.cost {} found, best possible: {}'.format(m.objective_value, m.objective_bound))
+    elif status == OptimizationStatus.NO_SOLUTION_FOUND:
+        print('no feasible solution found, lower bound is: {}'.format(m.objective_bound))
+    
+    if status == OptimizationStatus.OPTIMAL or status == OptimizationStatus.FEASIBLE:
+        for edge in edgeSet:
+            u = edge[0]
+            v = edge[1]
+            if X[(u,v)].x >= 0.99:
+                hittingSet.append(edge)
+        return hittingSet, True
+
+    return hittingSet, False
+
+
+def wrongILPSolve(G):
     H = G
     G = H.copy()
 
@@ -118,7 +390,6 @@ def solve(G):
     return removedVertices, removedEdges
 
 
-
 def baselineSolve(G):
     """
     Args:
@@ -141,10 +412,6 @@ def baselineSolve(G):
         # 3) repeat until |REMOVE_EDGES| == k
         # 4) pick vertex that shortens size of REMOVE_EDGES
         # 5) keep repeating
-
-
-
-
 
 
     H = G
@@ -224,8 +491,6 @@ def removeShortestEdge(G, removedEdges, s, t):
     removedEdges.append(shortestEdge)
     return True
 
-
-#we need to add connected check on THIS!!
 def pickRemoveVertex(G, removeEdges, s, t):
     counter = defaultdict(lambda: 0)
     for edge in removeEdges:
@@ -259,51 +524,53 @@ def pickRemoveVertex(G, removeEdges, s, t):
 
 # Usage: python3 solver.py test.in
 
-if __name__ == '__main__':
-    assert len(sys.argv) == 2
-    path = sys.argv[1]
-    G = read_input_file(path)
-    c, k = solve(G)
-    assert is_valid_solution(G, c, k)
-    print("Shortest Path Difference: {}".format(calculate_score(G, c, k)))
-    write_output_file(G, c, k, 'custom_outputs/small-1.out')
+# if __name__ == '__main__':
+#     assert len(sys.argv) == 2
+#     path = sys.argv[1]
+#     G = read_input_file(path)
+#     c, k = solve(G)
+#     assert is_valid_solution(G, c, k)
+#     print("Shortest Path Difference: {}".format(calculate_score(G, c, k)))
+#     write_output_file(G, c, k, 'custom_outputs/small-1.out')
 
 
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
-# if __name__ == '__main__':
-#     counter = 0
-#     inputs = glob.glob('inputs/large/*.in')
-#     for input_path in inputs:
-#         counter += 1
-#         if (counter % 50 == 0):
-#             print("Running file #", counter)
-#         output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
-#         G = read_input_file(input_path)
-#         c, k = solve(G)
-#         assert is_valid_solution(G, c, k)
-#         distance = calculate_score(G, c, k)
-#         write_output_file(G, c, k, output_path)
+if __name__ == '__main__':
+    counter = 0
+    # inputs = glob.glob('inputs/large/*.in')
+    # for input_path in inputs:
+    #     counter += 1
+    #     if (counter % 50 == 0):
+    #         print("Running file #", counter)
+    #     output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
+    #     G = read_input_file(input_path)
+    #     c, k = solve(G)
+    #     assert is_valid_solution(G, c, k)
+    #     distance = calculate_score(G, c, k)
+    #     write_output_file(G, c, k, output_path)
     
-#     inputs = glob.glob('inputs/medium/*.in')
-#     for input_path in inputs:
-#         counter += 1
-#         if (counter % 50 == 0):
-#             print("Running file #", counter)
-#         output_path = 'outputs/medium/' + basename(normpath(input_path))[:-3] + '.out'
-#         G = read_input_file(input_path)
-#         c, k = solve(G)
-#         assert is_valid_solution(G, c, k)
-#         distance = calculate_score(G, c, k)
-#         write_output_file(G, c, k, output_path)
+    inputs = glob.glob('inputs/small/*.in')
+    for input_path in inputs:
+        counter += 1
+        if (counter % 50 == 0):
+            print("Running file #", counter)
+        output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
+        G = read_input_file(input_path)
+        c, k = solve(G)
+        assert is_valid_solution(G, c, k)
+        distance = calculate_score(G, c, k)
+        write_output_file(G, c, k, output_path)
 
-#     inputs = glob.glob('inputs/small/*.in')
-#     for input_path in inputs:
-#         counter += 1
-#         if (counter % 50 == 0):
-#             print("Running file #", counter)
-#         output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
-#         G = read_input_file(input_path)
-#         c, k = solve(G)
-#         assert is_valid_solution(G, c, k)
-#         distance = calculate_score(G, c, k)
-#         write_output_file(G, c, k, output_path)
+    inputs = glob.glob('inputs/medium/*.in')
+    for input_path in inputs:
+        counter += 1
+        if (counter % 50 == 0):
+            print("Running file #", counter)
+        output_path = 'outputs/medium/' + basename(normpath(input_path))[:-3] + '.out'
+        G = read_input_file(input_path)
+        c, k = solve(G)
+        assert is_valid_solution(G, c, k)
+        distance = calculate_score(G, c, k)
+        write_output_file(G, c, k, output_path)
+
+
