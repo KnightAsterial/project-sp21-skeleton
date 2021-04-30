@@ -13,8 +13,10 @@ from mip import *
 from pysat.examples.hitman import Hitman
 
 from itertools import islice
+import time
 
 def solve(G):
+    start = time.time()
 
     originalGraph = G
     G = originalGraph.copy()
@@ -70,6 +72,12 @@ def solve(G):
             found = False
             trialCap = 0
             for hs in hittingSetIterator.enumerate():
+                if (time.time() - start > 120):
+                    print()
+                    print("Exitted early")
+                    print(removedEdges)
+                    print(removedVertices)
+                    return removedVertices, removedEdges
                 trialCap += 1
                 if (len(hs) > k) or (trialCap > 1000):
                     canContinue = False
@@ -78,6 +86,7 @@ def solve(G):
                 newG.remove_edges_from(hs)
                 if nx.is_connected(newG):
                     # print("Found hitting set of length", len(hs))
+                    print(".", end="", flush=True)
                     found = True
                     removedEdges = hs
                     G = newG
@@ -103,7 +112,7 @@ def solve(G):
         else:
             break
 
-
+    print()
     print(removedEdges)
     print(removedVertices)
     return removedVertices, removedEdges
@@ -539,7 +548,7 @@ def pickRemoveVertex(G, removeEdges, s, t):
 
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
 if __name__ == '__main__':
-    counter = 0
+    counter = -1
     # inputs = glob.glob('inputs/large/*.in')
     # for input_path in inputs:
     #     counter += 1
@@ -556,7 +565,7 @@ if __name__ == '__main__':
     for input_path in inputs:
         counter += 1
         if (counter % 50 == 0):
-            print("Running file #", counter)
+            print("Running file #", counter+1)
         output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
         G = read_input_file(input_path)
         c, k = solve(G)
