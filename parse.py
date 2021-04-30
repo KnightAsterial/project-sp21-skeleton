@@ -166,3 +166,43 @@ def write_output_file(G, c, k, path):
         for road in k:
             fo.write(str(road[0]) + " " + str(road[1]) + "\n")
         fo.close()
+
+
+
+def get_config_from_output(path):
+    """
+    Parses and validates an output file
+
+    Args:
+        G: input graph corresponding to input file
+        path: str, path to output file
+    Returns:
+        score: the difference between the new and original shortest path
+    """
+
+    cities = []
+    removed_edges = []
+
+    with open(path, "r") as fo:
+
+        number_of_cities = fo.readline().strip()
+        number_of_cities = int(number_of_cities)
+
+        for _ in range(number_of_cities):
+            city = fo.readline().strip()
+            city = int(city)
+            cities.append(city)
+
+        number_of_roads = fo.readline().strip()
+        assert number_of_roads.isdigit(), 'Number of roads is not a digit'
+        number_of_roads = int(number_of_roads)
+
+        for _ in range(number_of_roads):
+            road = fo.readline().split()
+            assert len(road) == 2, 'An edge must be specified with a start and end vertex'
+            assert road[0].isdigit() and road[1].isdigit()
+            u = int(road[0])
+            v = int(road[1])
+            removed_edges.append((u,v))
+
+    return cities, removed_edges

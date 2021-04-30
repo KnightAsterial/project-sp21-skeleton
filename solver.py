@@ -1,5 +1,5 @@
 import networkx as nx
-from parse import read_input_file, write_output_file
+from parse import read_input_file, write_output_file, read_output_file
 from utils import is_valid_solution, calculate_score
 import sys
 from os.path import basename, normpath
@@ -14,6 +14,7 @@ from pysat.examples.hitman import Hitman
 
 from itertools import islice
 import time
+import random
 
 def solve(G):
     start = time.time()
@@ -28,12 +29,15 @@ def solve(G):
     # correctly identify the size of the problem
     k = 15
     c = 1
+    p = 0.01
     if (numNodes > 30):
         k = 50
         c = 3
+        p = 0.1
     if (numNodes > 50):
         k = 100
         c = 5
+        p = 0.4
 
     # while removedEdges < k
     #   find shortest path
@@ -47,6 +51,10 @@ def solve(G):
     removedVertices = []
 
     
+    fixedRemovedEdges  = [] #edges that are guarenteed to be removed after a certain point
+    edgesSeenInRemovedEdges = defaultdict(lambda: 0) #dict that holds the count of all edges
+    p = p #prob that fixedRemovedEdges is added
+
     canContinue = True
 
     # originalGraph = nothing removed
@@ -55,10 +63,63 @@ def solve(G):
 
     vertexRemovalGraph = originalGraph.copy()
 
-
     while (len(removedVertices) <= c) and canContinue:
+        canRemoveVertexCounter = 0
+
         # loop starts with G having the most recent removedEdges removed
-        while len(removedEdges) < k and canContinue:
+        while len(removedEdges) + len(fixedRemovedEdges) < k and canContinue:
+
+           #with probability p, we add an edge to the edgeList
+            x = random.random()
+            if (x < p):
+                addedAnEdgeToDict = False
+                # print(edgesSeenInRemovedEdges)
+                while not addedAnEdgeToDict and len(edgesSeenInRemovedEdges) != 0:
+                    maxEdge = max(edgesSeenInRemovedEdges, key=edgesSeenInRemovedEdges.get)
+
+                    #check that removing maxEdge does not disconnect the graph
+                    if not canRemoveEdge(maxEdge, vertexRemovalGraph):
+                        # print("connectivity issue")
+                        del edgesSeenInRemovedEdges[maxEdge]
+
+                    else:
+                        if maxEdge in fixedRemovedEdges:
+                            # print('nani')
+                            del edgesSeenInRemovedEdges[maxEdge]
+                        else:
+                            #we added something to fixedRemovedEdges!!
+                            # print("we added an edge to fixedRemovedEdges!!!")
+                            fixedRemovedEdges.append(maxEdge)
+                            shortestPaths = list(filter(lambda path: not any([edge == maxEdge for edge in path]), shortestPaths))
+
+                            print()
+                            # print("length of removeEdges:", len(removedEdges))
+                            # print("removeEdges:", removedEdges)
+                            # print("length of fixedRemovedEdges:", len(fixedRemovedEdges))
+                            # print('fixedRemovedEdges:',fixedRemovedEdges )
+                            print()
+                            # print("maxEdge:", maxEdge)
+                            addedAnEdgeToDict = True
+
+            #MIGHT ERROR :((
+            #remove all edges in G from the removedEdges
+            removeFromFixedRemovedEdges = []
+            for edge in fixedRemovedEdges:
+                u = edge[0]
+                v = edge[1]
+                GCopy = vertexRemovalGraph.copy()
+                if GCopy.has_edge(u, v):
+                    GCopy.remove_edge(u, v)
+                    if nx.is_connected(GCopy):
+                        vertexRemovalGraph.remove_edge(u, v)
+                    else:
+                        removeFromFixedRemovedEdges.append(edge)
+                        print("will delete this edge from fixedRemovedEdges:", edge)
+               
+
+            # fixedRemovedEdges = list(filter(lambda edge: edge not in removeFromFixedRemovedEdges, fixedRemovedEdges))
+
+
             # nodePathShortest = nx.dijkstra_path(G, s, t)
             # edgePathShortest = [(nodePathShortest[i], nodePathShortest[i+1]) for i in range(len(nodePathShortest) - 1)]
             
@@ -70,35 +131,57 @@ def solve(G):
             
             hittingSetIterator = hittingSetHitman(shortestPaths)
             found = False
-            trialCap = 0
+            trialCap = 0 #at most we will try 1000 hitting sets
             for hs in hittingSetIterator.enumerate():
-                if (time.time() - start > 120):
+
+                #if overtime, just quit game is too hard :(())
+                if (time.time() - start > 180):
                     print()
-                    print("Exitted early")
-                    print(removedEdges)
+                    print()
+                    finalRemovedEdges = removedEdges + fixedRemovedEdges
+                    print(finalRemovedEdges)
                     print(removedVertices)
-                    return removedVertices, removedEdges
+                    return removedVertices, finalRemovedEdges
+                
                 trialCap += 1
-                if (len(hs) > k) or (trialCap > 1000):
-                    canContinue = False
-                    break
+                #if the hitting set is too long
+                #OR we have seen too many hitting sets 
+                if (len(hs) + len(fixedRemovedEdges) > k) or (trialCap > 1000):
+                    if canRemoveVertexCounter > 1:
+                        print(len(hs) + len(fixedRemovedEdges) > k)
+                        print(trialCap > 1000)
+                        canContinue = False
+                        print("we exit here?")
+                        break
+                    else:
+                        canRemoveVertexCounter += 1
+
+                #remove the edges!
                 newG = vertexRemovalGraph.copy()
                 newG.remove_edges_from(hs)
+
                 if nx.is_connected(newG):
                     # print("Found hitting set of length", len(hs))
                     print(".", end="", flush=True)
                     found = True
                     removedEdges = hs
                     G = newG
+
+                    #keeps track of all edges seen in valids hs
+                    for edge in hs:
+                        edgesSeenInRemovedEdges[edge] += 1
                     break
+
             if found == False:
                 canContinue = False
+
+
 
         if (len(removedVertices) < c) and canContinue:     
             # consolidate edges into vertices
             # TODO: figure out if we should pass G in here or maybe vertexRemovalGraph (4/29/21)
             # vertexToRemove, canRemoveVertex = pickRemoveVertex(G, removedEdges, s, t)
-            vertexToRemove, canRemoveVertex = pickRemoveVertex(vertexRemovalGraph, removedEdges, s, t)
+            vertexToRemove, canRemoveVertex = pickRemoveVertex(vertexRemovalGraph, removedEdges + fixedRemovedEdges, s, t)
             if (not canRemoveVertex):
                 canContinue = False
                 break
@@ -107,15 +190,31 @@ def solve(G):
             vertexRemovalGraph.remove_node(vertexToRemove)
             G.remove_node(vertexToRemove)
             removedEdges = list(filter(lambda edge: edge[0] != vertexToRemove and edge[1] != vertexToRemove, removedEdges))
+            fixedRemovedEdges = list(filter(lambda edge: edge[0] != vertexToRemove and edge[1] != vertexToRemove, fixedRemovedEdges))
             shortestPaths = list(filter(lambda path: not any([edge[0] == vertexToRemove or edge[1] == vertexToRemove for edge in path]), shortestPaths))
             G = vertexRemovalGraph.copy()
         else:
             break
 
     print()
-    print(removedEdges)
+    finalRemovedEdges = removedEdges + fixedRemovedEdges
+    print(finalRemovedEdges)
     print(removedVertices)
-    return removedVertices, removedEdges
+    return removedVertices, finalRemovedEdges
+
+
+def canRemoveEdge(edge, G):
+    u = edge[0]
+    v = edge[1]
+    GCopy = G.copy()
+    if GCopy.has_edge(u, v):
+        GCopy.remove_edge(u, v)
+        if nx.is_connected(GCopy):
+            return True
+        else:
+            return False
+    return False
+    
 
 
 def hittingSetHitman(listOfPaths):
@@ -549,17 +648,6 @@ def pickRemoveVertex(G, removeEdges, s, t):
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
 if __name__ == '__main__':
     counter = -1
-    # inputs = glob.glob('inputs/large/*.in')
-    # for input_path in inputs:
-    #     counter += 1
-    #     if (counter % 50 == 0):
-    #         print("Running file #", counter)
-    #     output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
-    #     G = read_input_file(input_path)
-    #     c, k = solve(G)
-    #     assert is_valid_solution(G, c, k)
-    #     distance = calculate_score(G, c, k)
-    #     write_output_file(G, c, k, output_path)
     
     inputs = glob.glob('inputs/small/*.in')
     for input_path in inputs:
@@ -569,20 +657,77 @@ if __name__ == '__main__':
         output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
         G = read_input_file(input_path)
         c, k = solve(G)
-        assert is_valid_solution(G, c, k)
+        try:
+            assert is_valid_solution(G, c, k)
+        except Exception as exception:
+            c, k = baselineSolve(G)
+        
+        writeSolution = False
         distance = calculate_score(G, c, k)
-        write_output_file(G, c, k, output_path)
+        try:
+            prevBestScore = read_output_file(G, output_path)
+            if distance > prevBestScore:
+                writeSolution = True
+        except:
+            print("Computed score is worse, not overwriting")
+            writeSolution = False
+        if writeSolution:
+            print("Writing...")
+            write_output_file(G, c, k, output_path)
+
 
     inputs = glob.glob('inputs/medium/*.in')
     for input_path in inputs:
         counter += 1
         if (counter % 50 == 0):
-            print("Running file #", counter)
+            print("Running file #", counter+1)
         output_path = 'outputs/medium/' + basename(normpath(input_path))[:-3] + '.out'
         G = read_input_file(input_path)
         c, k = solve(G)
-        assert is_valid_solution(G, c, k)
+        try:
+            assert is_valid_solution(G, c, k)
+        except Exception as exception:
+            c, k = baselineSolve(G)
+        
+        writeSolution = False
         distance = calculate_score(G, c, k)
-        write_output_file(G, c, k, output_path)
+        try:
+            prevBestScore = read_output_file(G, output_path)
+            if distance > prevBestScore:
+                writeSolution = True
+        except:
+            print("Computed score is worse, not overwriting")
+            writeSolution = False
+        if writeSolution:
+            print("Writing...")
+            write_output_file(G, c, k, output_path)
+    
+
+
+    inputs = glob.glob('inputs/large/*.in')
+    for input_path in inputs:
+        counter += 1
+        if (counter % 50 == 0):
+            print("Running file #", counter+1)
+        output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
+        G = read_input_file(input_path)
+        c, k = solve(G)
+        try:
+            assert is_valid_solution(G, c, k)
+        except Exception as exception:
+            c, k = baselineSolve(G)
+        
+        writeSolution = False
+        distance = calculate_score(G, c, k)
+        try:
+            prevBestScore = read_output_file(G, output_path)
+            if distance > prevBestScore:
+                writeSolution = True
+        except:
+            print("Computed score is worse, not overwriting")
+            writeSolution = False
+        if writeSolution:
+            print("Writing...")
+            write_output_file(G, c, k, output_path)
 
 
