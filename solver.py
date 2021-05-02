@@ -92,12 +92,12 @@ def solve(G):
                             fixedRemovedEdges.append(maxEdge)
                             shortestPaths = list(filter(lambda path: not any([edge == maxEdge for edge in path]), shortestPaths))
 
-                            print()
+                            # print()
                             # print("length of removeEdges:", len(removedEdges))
                             # print("removeEdges:", removedEdges)
                             # print("length of fixedRemovedEdges:", len(fixedRemovedEdges))
                             # print('fixedRemovedEdges:',fixedRemovedEdges )
-                            print()
+                            # print()
                             # print("maxEdge:", maxEdge)
                             addedAnEdgeToDict = True
 
@@ -136,7 +136,7 @@ def solve(G):
 
                 #if overtime, just quit game is too hard :(())
                 if (time.time() - start > 180):
-                    print()
+                    # print()
                     print()
                     finalRemovedEdges = removedEdges + fixedRemovedEdges
                     print(finalRemovedEdges)
@@ -664,13 +664,16 @@ if __name__ == '__main__':
         
         writeSolution = False
         distance = calculate_score(G, c, k)
+        print(output_path, "score:", distance)
         try:
             prevBestScore = read_output_file(G, output_path)
             if distance > prevBestScore:
                 writeSolution = True
+            else:
+                print("Current solution is worse. Not overwriting.")
         except:
-            print("Computed score is worse, not overwriting")
-            writeSolution = False
+            print("Previous solution didn't exist.")
+            writeSolution = True
         if writeSolution:
             print("Writing...")
             write_output_file(G, c, k, output_path)
@@ -691,13 +694,16 @@ if __name__ == '__main__':
         
         writeSolution = False
         distance = calculate_score(G, c, k)
+        print(output_path, "score:", distance)
         try:
             prevBestScore = read_output_file(G, output_path)
             if distance > prevBestScore:
                 writeSolution = True
+            else:
+                print("Current solution is worse. Not overwriting.")
         except:
-            print("Computed score is worse, not overwriting")
-            writeSolution = False
+            print("Previous solution didn't exist.")
+            writeSolution = True
         if writeSolution:
             print("Writing...")
             write_output_file(G, c, k, output_path)
@@ -719,13 +725,16 @@ if __name__ == '__main__':
         
         writeSolution = False
         distance = calculate_score(G, c, k)
+        print(output_path, "score:", distance)
         try:
             prevBestScore = read_output_file(G, output_path)
             if distance > prevBestScore:
                 writeSolution = True
+            else:
+                print("Current solution is worse. Not overwriting.")
         except:
-            print("Computed score is worse, not overwriting")
-            writeSolution = False
+            print("Previous solution didn't exist.")
+            writeSolution = True
         if writeSolution:
             print("Writing...")
             write_output_file(G, c, k, output_path)
