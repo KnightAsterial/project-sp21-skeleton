@@ -635,108 +635,108 @@ def pickRemoveVertex(G, removeEdges, s, t):
 
 # Usage: python3 solver.py test.in
 
-# if __name__ == '__main__':
-#     assert len(sys.argv) == 2
-#     path = sys.argv[1]
-#     G = read_input_file(path)
-#     c, k = solve(G)
-#     assert is_valid_solution(G, c, k)
-#     print("Shortest Path Difference: {}".format(calculate_score(G, c, k)))
-#     write_output_file(G, c, k, 'custom_outputs/small-1.out')
+if __name__ == '__main__':
+    assert len(sys.argv) == 2
+    path = sys.argv[1]
+    G = read_input_file(path)
+    c, k = solve(G)
+    assert is_valid_solution(G, c, k)
+    print("Shortest Path Difference: {}".format(calculate_score(G, c, k)))
+    write_output_file(G, c, k, 'custom_outputs/small-1.out')
 
 
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
-if __name__ == '__main__':
-    counter = -1
+# if __name__ == '__main__':
+#     counter = -1
     
-    inputs = glob.glob('inputs/small/*.in')
-    for input_path in inputs:
-        counter += 1
-        if (counter % 50 == 0):
-            print("Running file #", counter+1)
-        output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
-        G = read_input_file(input_path)
-        c, k = solve(G)
-        try:
-            assert is_valid_solution(G, c, k)
-        except Exception as exception:
-            c, k = baselineSolve(G)
+#     inputs = glob.glob('inputs/small/*.in')
+#     for input_path in inputs:
+#         counter += 1
+#         if (counter % 50 == 0):
+#             print("Running file #", counter+1)
+#         output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
+#         G = read_input_file(input_path)
+#         c, k = solve(G)
+#         try:
+#             assert is_valid_solution(G, c, k)
+#         except Exception as exception:
+#             c, k = baselineSolve(G)
         
-        writeSolution = False
-        distance = calculate_score(G, c, k)
-        print(output_path, "score:", distance)
-        try:
-            prevBestScore = read_output_file(G, output_path)
-            if distance > prevBestScore:
-                writeSolution = True
-            else:
-                print("Current solution is worse. Not overwriting.")
-        except:
-            print("Previous solution didn't exist.")
-            writeSolution = True
-        if writeSolution:
-            print("Writing...")
-            write_output_file(G, c, k, output_path)
+#         writeSolution = False
+#         distance = calculate_score(G, c, k)
+#         print(output_path, "score:", distance)
+#         try:
+#             prevBestScore = read_output_file(G, output_path)
+#             if distance > prevBestScore:
+#                 writeSolution = True
+#             else:
+#                 print("Current solution is worse. Not overwriting.")
+#         except:
+#             print("Previous solution didn't exist.")
+#             writeSolution = True
+#         if writeSolution:
+#             print("Writing...")
+#             write_output_file(G, c, k, output_path)
 
 
-    inputs = glob.glob('inputs/medium/*.in')
-    for input_path in inputs:
-        counter += 1
-        if (counter % 50 == 0):
-            print("Running file #", counter+1)
-        output_path = 'outputs/medium/' + basename(normpath(input_path))[:-3] + '.out'
-        G = read_input_file(input_path)
-        c, k = solve(G)
-        try:
-            assert is_valid_solution(G, c, k)
-        except Exception as exception:
-            c, k = baselineSolve(G)
+#     inputs = glob.glob('inputs/medium/*.in')
+#     for input_path in inputs:
+#         counter += 1
+#         if (counter % 50 == 0):
+#             print("Running file #", counter+1)
+#         output_path = 'outputs/medium/' + basename(normpath(input_path))[:-3] + '.out'
+#         G = read_input_file(input_path)
+#         c, k = solve(G)
+#         try:
+#             assert is_valid_solution(G, c, k)
+#         except Exception as exception:
+#             c, k = baselineSolve(G)
         
-        writeSolution = False
-        distance = calculate_score(G, c, k)
-        print(output_path, "score:", distance)
-        try:
-            prevBestScore = read_output_file(G, output_path)
-            if distance > prevBestScore:
-                writeSolution = True
-            else:
-                print("Current solution is worse. Not overwriting.")
-        except:
-            print("Previous solution didn't exist.")
-            writeSolution = True
-        if writeSolution:
-            print("Writing...")
-            write_output_file(G, c, k, output_path)
+#         writeSolution = False
+#         distance = calculate_score(G, c, k)
+#         print(output_path, "score:", distance)
+#         try:
+#             prevBestScore = read_output_file(G, output_path)
+#             if distance > prevBestScore:
+#                 writeSolution = True
+#             else:
+#                 print("Current solution is worse. Not overwriting.")
+#         except:
+#             print("Previous solution didn't exist.")
+#             writeSolution = True
+#         if writeSolution:
+#             print("Writing...")
+#             write_output_file(G, c, k, output_path)
     
 
 
-    inputs = glob.glob('inputs/large/*.in')
-    for input_path in inputs:
-        counter += 1
-        if (counter % 50 == 0):
-            print("Running file #", counter+1)
-        output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
-        G = read_input_file(input_path)
-        c, k = solve(G)
-        try:
-            assert is_valid_solution(G, c, k)
-        except Exception as exception:
-            c, k = baselineSolve(G)
+#     inputs = glob.glob('inputs/large/*.in')
+#     for input_path in inputs:
+#         counter += 1
+#         if (counter % 50 == 0):
+#             print("Running file #", counter+1)
+#         output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
+#         G = read_input_file(input_path)
+#         c, k = solve(G)
+#         try:
+#             assert is_valid_solution(G, c, k)
+#         except Exception as exception:
+#             c, k = baselineSolve(G)
         
-        writeSolution = False
-        distance = calculate_score(G, c, k)
-        print(output_path, "score:", distance)
-        try:
-            prevBestScore = read_output_file(G, output_path)
-            if distance > prevBestScore:
-                writeSolution = True
-            else:
-                print("Current solution is worse. Not overwriting.")
-        except:
-            print("Previous solution didn't exist.")
-            writeSolution = True
-        if writeSolution:
-            print("Writing...")
-            write_output_file(G, c, k, output_path)
+#         writeSolution = False
+#         distance = calculate_score(G, c, k)
+#         print(output_path, "score:", distance)
+#         try:
+#             prevBestScore = read_output_file(G, output_path)
+#             if distance > prevBestScore:
+#                 writeSolution = True
+#             else:
+#                 print("Current solution is worse. Not overwriting.")
+#         except:
+#             print("Previous solution didn't exist.")
+#             writeSolution = True
+#         if writeSolution:
+#             print("Writing...")
+#             write_output_file(G, c, k, output_path)
 
 
