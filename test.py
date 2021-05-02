@@ -288,11 +288,11 @@ if __name__ == '__main__':
         try:
             inputs = glob.glob('inputs/small/*.in')
             for input_path in inputs:
-                print('running', counter)
                 counter += 1
                 if (counter % 50 == 0):
                     print("Running file #", counter+1)
                 output_path = 'outputs/small/' + basename(normpath(input_path))[:-3] + '.out'
+                print(output_path)
                 prevC, prevK = get_config_from_output(output_path)
                 G = read_input_file(input_path)
                 c, k = solve(G, prevC, prevK)
@@ -373,7 +373,8 @@ if __name__ == '__main__':
                     print(output_path, "score:", distance)
                     print("Writing...")
                     write_output_file(G, c, k, output_path)
-        except:
+        except Exception as e:
+            print(e)
             continue
 
 
