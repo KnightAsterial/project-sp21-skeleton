@@ -322,6 +322,7 @@ if __name__ == '__main__':
                 if (counter % 50 == 0):
                     print("Running file #", counter+1)
                 output_path = 'outputs/medium/' + basename(normpath(input_path))[:-3] + '.out'
+                print(output_path)
                 prevC, prevK = get_config_from_output(output_path)
                 G = read_input_file(input_path)
                 c, k = solve(G, prevC, prevK)
@@ -351,6 +352,7 @@ if __name__ == '__main__':
                 if (counter % 50 == 0):
                     print("Running file #", counter+1)
                 output_path = 'outputs/large/' + basename(normpath(input_path))[:-3] + '.out'
+                print(output_path)
                 prevC, prevK = get_config_from_output(output_path)
                 G = read_input_file(input_path)
                 c, k = solve(G, prevC, prevK)
