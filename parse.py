@@ -124,6 +124,8 @@ def read_output_file(G, path):
         assert number_of_roads.isdigit(), 'Number of roads is not a digit'
         number_of_roads = int(number_of_roads)
 
+        assert number_of_roads <= max_roads, "Too many roads being removed from input graph"
+
         for _ in range(number_of_roads):
             road = fo.readline().split()
             assert len(road) == 2, 'An edge must be specified with a start and end vertex'
